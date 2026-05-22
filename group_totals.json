@@ -1,0 +1,103 @@
+{
+  "-4982006699": {
+    "history": []
+  },
+  "-1002289588020": {
+    "history": [
+      {
+        "user": "PayWay by ABA",
+        "amount": 1.0,
+        "currency": "USD",
+        "source": "PayWay",
+        "datetime": "2026-05-23T00:33:08.658940+07:00"
+      },
+      {
+        "user": "PayWay by ABA",
+        "amount": 10.0,
+        "currency": "USD",
+        "source": "PayWay",
+        "datetime": "2026-05-23T00:35:31.267308+07:00"
+      }
+    ],
+    "active": true
+  },
+  "-5288634415": {
+    "history": [
+      {
+        "user": "Van",
+        "amount": 66.0,
+        "currency": "USD",
+        "source": "PayWay",
+        "datetime": "2026-05-22T17:24:59.700613+07:00"
+      },
+      {
+        "user": "Van",
+        "amount": 120.0,
+        "currency": "USD",
+        "source": "PayWay",
+        "datetime": "2026-05-22T17:24:59.701899+07:00"
+      },
+      {
+        "user": "Van",
+        "amount": 33.0,
+        "currency": "USD",
+        "source": "PayWay",
+        "datetime": "2026-05-22T17:24:59.702602+07:00"
+      }
+    ],
+    "active": true
+  },
+  "-5119116884": {
+    "history": [
+      {
+        "user": "PayWay by ABA",
+        "amount": 1.0,
+        "currency": "USD",
+        "source": "PayWay",
+        "datetime": "2026-05-23T00:30:19.814085+07:00"
+      }
+    ]
+  },
+  "-1002337960835": {
+    "history": [],
+    "active": true,
+    "report_hour": 12,
+    "report_minute": 0
+  },
+  "-1002355121860": {
+    "history": [],
+    "active": true,
+    "report_hour": 22,
+    "report_minute": 0
+  },
+  "-1002325775458": {
+    "history": [],
+    "active": true,
+    "report_hour": 22,
+    "report_minute": 0
+  },
+  "-1002252435085": {
+    "history": [],
+    "active": true,
+    "report_hour": 22,
+    "report_minute": 0
+  },
+  "-1003785412291": {
+    "history": [],
+    "active": true,
+    "report_hour": 22,
+    "report_minute": 0
+  },
+  "-1002133297172": {
+    "history": [],
+    "active": true,
+    "report_hour": 21,
+    "report_minute": 0
+  },
+  "-1002485340650": {
+    "history": [],
+    "active": true,
+    "report_hour": 22,
+    "report_minute": 0
+  }
+}
