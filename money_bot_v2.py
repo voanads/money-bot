@@ -335,9 +335,25 @@ def restore_schedules(app):
                 pass
 
 # ══════════════════════════════════════════════════════════════════════════════
-# MAIN — run both bots together
+# MAIN — run both bots CONCURRENTLY (fix: asyncio.gather so neither blocks)
 # ══════════════════════════════════════════════════════════════════════════════
-async def run_calculationsbot():
+async def run_userbot():
+    try:
+        if SESSION_STRING:
+            await userbot.start()
+        else:
+            await userbot.start(phone=PHONE)
+        logger.info("👁 UserBot started — watching PayWay messages silently")
+        await userbot.run_until_disconnected()
+    except Exception as e:
+        logger.error(f"UserBot error: {e}")
+
+async def keep_alive():
+    """Keep running forever until cancelled."""
+    await asyncio.Event().wait()
+
+async def main():
+    # ── Build & start Calculationsbot ─────────────────────────────────────────
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start",     start))
     app.add_handler(CommandHandler("help",      start))
@@ -357,31 +373,13 @@ async def run_calculationsbot():
     await app.start()
     await app.updater.start_polling(allowed_updates=["message", "callback_query"])
     logger.info("🤖 Calculationsbot started!")
-    return app
 
-async def main():
+    # ── Run UserBot + keep-alive together (no idle() call) ────────────────────
     try:
-        # Start userbot with StringSession (no phone needed)
-        if SESSION_STRING:
-            await userbot.start()
-        else:
-            await userbot.start(phone=PHONE)
-        logger.info("👁 UserBot started — watching PayWay messages silently")
-    except Exception as e:
-        logger.error(f"UserBot failed to start: {e}")
-        raise
-
-    try:
-        # Start calculationsbot
-        app = await run_calculationsbot()
-        logger.info("🤖 Both bots running!")
-    except Exception as e:
-        logger.error(f"Calculationsbot failed to start: {e}")
-        raise
-
-    # Run both forever
-    try:
-        await userbot.run_until_disconnected()
+        await asyncio.gather(
+            run_userbot(),
+            keep_alive(),
+        )
     finally:
         try:
             await app.updater.stop()
