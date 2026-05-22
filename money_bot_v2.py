@@ -17,7 +17,9 @@ from zoneinfo import ZoneInfo
 from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 
-from telegram import (
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+    constants,
+    constants,
     Update, InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 )
 from telegram.ext import (
@@ -204,26 +206,26 @@ def start(update: Update, context: CallbackContext):
         "• `/history` — Last 10 entries\n"
         "• `/reset` — Reset this group\n"
         "• `/setreport` — Set auto report time 🕐",
-        parse_mode=ParseMode.MARKDOWN
+        parse_mode="Markdown"
     )
 
 def today_cmd(update: Update, context: CallbackContext):
-    update.message.reply_text(build_summary(update.effective_chat.id, "today", "Today", "ថ្ងៃនេះ"), parse_mode=ParseMode.MARKDOWN)
+    update.message.reply_text(build_summary(update.effective_chat.id, "today", "Today", "ថ្ងៃនេះ"), parse_mode="Markdown")
 
 def week_cmd(update: Update, context: CallbackContext):
-    update.message.reply_text(build_summary(update.effective_chat.id, "week", "This Week", "សប្តាហ៍នេះ"), parse_mode=ParseMode.MARKDOWN)
+    update.message.reply_text(build_summary(update.effective_chat.id, "week", "This Week", "សប្តាហ៍នេះ"), parse_mode="Markdown")
 
 def month_cmd(update: Update, context: CallbackContext):
-    update.message.reply_text(build_summary(update.effective_chat.id, "month", "This Month", "ខែនេះ"), parse_mode=ParseMode.MARKDOWN)
+    update.message.reply_text(build_summary(update.effective_chat.id, "month", "This Month", "ខែនេះ"), parse_mode="Markdown")
 
 def total_cmd(update: Update, context: CallbackContext):
-    update.message.reply_text(build_summary(update.effective_chat.id, "all", "All Time", "សរុបទាំងអស់"), parse_mode=ParseMode.MARKDOWN)
+    update.message.reply_text(build_summary(update.effective_chat.id, "all", "All Time", "សរុបទាំងអស់"), parse_mode="Markdown")
 
 def reset_cmd(update: Update, context: CallbackContext):
     data = load_data()
     data[str(update.effective_chat.id)] = {"history": []}
     save_data(data)
-    update.message.reply_text("🔄 *Reset done!*", parse_mode=ParseMode.MARKDOWN)
+    update.message.reply_text("🔄 *Reset done!*", parse_mode="Markdown")
 
 def history_cmd(update: Update, context: CallbackContext):
     data = load_data()
@@ -244,7 +246,7 @@ def history_cmd(update: Update, context: CallbackContext):
     update.message.reply_text(
         f"📋 *Last {len(last_10)} entries:*\n\n" + "\n".join(lines) +
         f"\n\n💵 USD Total: `{fmt_usd(usd)}`\n💴 KHR Total: `{fmt_khr(khr)}`",
-        parse_mode=ParseMode.MARKDOWN
+        parse_mode="Markdown"
     )
 
 def summary_cmd(update: Update, context: CallbackContext):
@@ -255,7 +257,7 @@ def summary_cmd(update: Update, context: CallbackContext):
         InlineKeyboardButton("🗓 This Month / ខែនេះ", callback_data="sum_month"),
         InlineKeyboardButton("📊 All Time / សរុប", callback_data="sum_all"),
     ]]
-    update.message.reply_text("📅 *Choose period:*", parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(keyboard))
+    update.message.reply_text("📅 *Choose period:*", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 def button_handler(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -267,7 +269,7 @@ def button_handler(update: Update, context: CallbackContext):
         "sum_all":   ("all", "All Time", "សរុបទាំងអស់"),
     }
     period, label_en, label_km = data_map.get(query.data, ("all", "All Time", "សរុប"))
-    query.edit_message_text(build_summary(query.message.chat.id, period, label_en, label_km), parse_mode=ParseMode.MARKDOWN)
+    query.edit_message_text(build_summary(query.message.chat.id, period, label_en, label_km), parse_mode="Markdown")
 
 def handle_manual(update: Update, context: CallbackContext):
     text = (update.message.text or "").strip()
@@ -300,13 +302,13 @@ def setreport_cmd(update: Update, context: CallbackContext):
     ],[
         InlineKeyboardButton("🚫 Turn OFF", callback_data="rpt_off"),
     ]]
-    update.message.reply_text("🕐 *Set Auto Report Time:*", parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(keyboard))
+    update.message.reply_text("🕐 *Set Auto Report Time:*", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 def send_auto_report(context: CallbackContext):
     chat_id = context.job.context
     now_str = now_kh().strftime("%d/%m/%Y")
     text = build_summary(chat_id, "today", f"🌙 Daily Report {now_str}", "សរុបប្រចាំថ្ងៃ")
-    context.bot.send_message(chat_id=chat_id, text=text + "\n\n✅ រាត្រីល្អ! 🙏", parse_mode=ParseMode.MARKDOWN)
+    context.bot.send_message(chat_id=chat_id, text=text + "\n\n✅ រាត្រីល្អ! 🙏", parse_mode="Markdown")
 
 def schedule_report(job_queue: JobQueue, chat_id, hour, minute):
     tz = ZoneInfo(TIMEZONE)
@@ -334,7 +336,7 @@ def setreport_button(update: Update, context: CallbackContext):
         chat.pop("report_hour", None)
         chat.pop("report_minute", None)
         save_data(data)
-        query.edit_message_text("🚫 *Auto report turned OFF*", parse_mode=ParseMode.MARKDOWN)
+        query.edit_message_text("🚫 *Auto report turned OFF*", parse_mode="Markdown")
         return
     parts = query.data.split("_")
     hour, minute = int(parts[1]), int(parts[2])
@@ -344,7 +346,7 @@ def setreport_button(update: Update, context: CallbackContext):
     chat["report_minute"] = minute
     save_data(data)
     schedule_report(context.job_queue, chat_id, hour, minute)
-    query.edit_message_text(f"✅ *Auto report set at {hour:02d}:{minute:02d}*", parse_mode=ParseMode.MARKDOWN)
+    query.edit_message_text(f"✅ *Auto report set at {hour:02d}:{minute:02d}*", parse_mode="Markdown")
 
 def restore_schedules(job_queue):
     data = load_data()
