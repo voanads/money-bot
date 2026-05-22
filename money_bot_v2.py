@@ -2,7 +2,7 @@
 """
 💰 PayWay ABA Money Tracker — Combined Bot
 - UserBot (Telethon): listens silently for PayWay messages
-- Calculationsbot (python-telegram-bot 13.x): handles commands
+- Calculationsbot (python-telegram-bot 21.x): handles commands
 """
 
 import re
@@ -18,13 +18,10 @@ from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-    constants,
-    constants,
-    Update, InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
-)
+from telegram.constants import ParseMode
 from telegram.ext import (
-    Updater, CommandHandler, MessageHandler, CallbackQueryHandler,
-    Filters, CallbackContext, JobQueue
+    ApplicationBuilder, ContextTypes, MessageHandler,
+    CommandHandler, CallbackQueryHandler, filters,
 )
 
 # ── SETTINGS ──────────────────────────────────────────────────────────────────
@@ -94,19 +91,13 @@ def parse_amount(text):
         sign_str, sym, num = m.groups()
         sign = -1 if sign_str == "-" else 1
         num = float(num.replace(",", ""))
-        if sym == "៛":
-            return int(num) * sign, "KHR"
-        else:
-            return num * sign, "USD"
+        return (int(num) * sign, "KHR") if sym == "៛" else (num * sign, "USD")
     m2 = re.match(r"^([+-]?)\s*(\d[\d,]*(?:\.\d+)?)\s*([៛$])$", text)
     if m2:
         sign_str, num, sym = m2.groups()
         sign = -1 if sign_str == "-" else 1
         num = float(num.replace(",", ""))
-        if sym == "៛":
-            return int(num) * sign, "KHR"
-        else:
-            return num * sign, "USD"
+        return (int(num) * sign, "KHR") if sym == "៛" else (num * sign, "USD")
     return None, None
 
 # ── Summary ───────────────────────────────────────────────────────────────────
@@ -148,7 +139,7 @@ def build_summary(chat_id, period, label_en, label_km):
     )
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PART 1: Telethon UserBot (async) — runs in its own thread
+# PART 1: Telethon UserBot — background thread with its own event loop
 # ══════════════════════════════════════════════════════════════════════════════
 if SESSION_STRING:
     userbot = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
@@ -192,10 +183,10 @@ def run_userbot_thread():
         logger.error(f"UserBot error: {e}")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PART 2: Calculationsbot (python-telegram-bot 13.x, sync) — main thread
+# PART 2: Calculationsbot — ptb 21.x async handlers
 # ══════════════════════════════════════════════════════════════════════════════
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text(
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
         "👋 *PayWay Money Tracker*\n\n"
         "📋 *Commands:*\n"
         "• `/today` — Today / ថ្ងៃនេះ\n"
@@ -206,33 +197,33 @@ def start(update: Update, context: CallbackContext):
         "• `/history` — Last 10 entries\n"
         "• `/reset` — Reset this group\n"
         "• `/setreport` — Set auto report time 🕐",
-        parse_mode="Markdown"
+        parse_mode=ParseMode.MARKDOWN
     )
 
-def today_cmd(update: Update, context: CallbackContext):
-    update.message.reply_text(build_summary(update.effective_chat.id, "today", "Today", "ថ្ងៃនេះ"), parse_mode="Markdown")
+async def today_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(build_summary(update.effective_chat.id, "today", "Today", "ថ្ងៃនេះ"), parse_mode=ParseMode.MARKDOWN)
 
-def week_cmd(update: Update, context: CallbackContext):
-    update.message.reply_text(build_summary(update.effective_chat.id, "week", "This Week", "សប្តាហ៍នេះ"), parse_mode="Markdown")
+async def week_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(build_summary(update.effective_chat.id, "week", "This Week", "សប្តាហ៍នេះ"), parse_mode=ParseMode.MARKDOWN)
 
-def month_cmd(update: Update, context: CallbackContext):
-    update.message.reply_text(build_summary(update.effective_chat.id, "month", "This Month", "ខែនេះ"), parse_mode="Markdown")
+async def month_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(build_summary(update.effective_chat.id, "month", "This Month", "ខែនេះ"), parse_mode=ParseMode.MARKDOWN)
 
-def total_cmd(update: Update, context: CallbackContext):
-    update.message.reply_text(build_summary(update.effective_chat.id, "all", "All Time", "សរុបទាំងអស់"), parse_mode="Markdown")
+async def total_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(build_summary(update.effective_chat.id, "all", "All Time", "សរុបទាំងអស់"), parse_mode=ParseMode.MARKDOWN)
 
-def reset_cmd(update: Update, context: CallbackContext):
+async def reset_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
     data[str(update.effective_chat.id)] = {"history": []}
     save_data(data)
-    update.message.reply_text("🔄 *Reset done!*", parse_mode="Markdown")
+    await update.message.reply_text("🔄 *Reset done!*", parse_mode=ParseMode.MARKDOWN)
 
-def history_cmd(update: Update, context: CallbackContext):
+async def history_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
     chat = get_chat(data, str(update.effective_chat.id))
     history = chat["history"]
     if not history:
-        update.message.reply_text("📭 No entries yet.")
+        await update.message.reply_text("📭 No entries yet.")
         return
     last_10 = history[-10:]
     lines = []
@@ -243,35 +234,35 @@ def history_cmd(update: Update, context: CallbackContext):
         lines.append(f"• `{sign}{amt}` — {e['user']} _{e.get('source','manual')}_ `{dt}`")
     usd = sum(e["amount"] for e in history if e["currency"] == "USD")
     khr = sum(int(e["amount"]) for e in history if e["currency"] == "KHR")
-    update.message.reply_text(
+    await update.message.reply_text(
         f"📋 *Last {len(last_10)} entries:*\n\n" + "\n".join(lines) +
         f"\n\n💵 USD Total: `{fmt_usd(usd)}`\n💴 KHR Total: `{fmt_khr(khr)}`",
-        parse_mode="Markdown"
+        parse_mode=ParseMode.MARKDOWN
     )
 
-def summary_cmd(update: Update, context: CallbackContext):
+async def summary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[
-        InlineKeyboardButton("📅 Today / ថ្ងៃនេះ", callback_data="sum_today"),
+        InlineKeyboardButton("📅 Today / ថ្ងៃនេះ",       callback_data="sum_today"),
         InlineKeyboardButton("📆 This Week / សប្តាហ៍នេះ", callback_data="sum_week"),
     ],[
-        InlineKeyboardButton("🗓 This Month / ខែនេះ", callback_data="sum_month"),
-        InlineKeyboardButton("📊 All Time / សរុប", callback_data="sum_all"),
+        InlineKeyboardButton("🗓 This Month / ខែនេះ",     callback_data="sum_month"),
+        InlineKeyboardButton("📊 All Time / សរុប",         callback_data="sum_all"),
     ]]
-    update.message.reply_text("📅 *Choose period:*", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text("📅 *Choose period:*", parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(keyboard))
 
-def button_handler(update: Update, context: CallbackContext):
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    query.answer()
+    await query.answer()
     data_map = {
-        "sum_today": ("today", "Today", "ថ្ងៃនេះ"),
-        "sum_week":  ("week", "This Week", "សប្តាហ៍នេះ"),
+        "sum_today": ("today", "Today",      "ថ្ងៃនេះ"),
+        "sum_week":  ("week",  "This Week",  "សប្តាហ៍នេះ"),
         "sum_month": ("month", "This Month", "ខែនេះ"),
-        "sum_all":   ("all", "All Time", "សរុបទាំងអស់"),
+        "sum_all":   ("all",   "All Time",   "សរុបទាំងអស់"),
     }
     period, label_en, label_km = data_map.get(query.data, ("all", "All Time", "សរុប"))
-    query.edit_message_text(build_summary(query.message.chat.id, period, label_en, label_km), parse_mode="Markdown")
+    await query.edit_message_text(build_summary(query.message.chat.id, period, label_en, label_km), parse_mode=ParseMode.MARKDOWN)
 
-def handle_manual(update: Update, context: CallbackContext):
+async def handle_manual(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (update.message.text or "").strip()
     amount, currency = parse_amount(text)
     if amount is not None:
@@ -286,7 +277,7 @@ def handle_manual(update: Update, context: CallbackContext):
         save_data(data)
         logger.info(f"[MANUAL] {amount} {currency} from {user}")
 
-def setreport_cmd(update: Update, context: CallbackContext):
+async def setreport_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[
         InlineKeyboardButton("6:00 AM",  callback_data="rpt_6_0"),
         InlineKeyboardButton("8:00 AM",  callback_data="rpt_8_0"),
@@ -302,41 +293,40 @@ def setreport_cmd(update: Update, context: CallbackContext):
     ],[
         InlineKeyboardButton("🚫 Turn OFF", callback_data="rpt_off"),
     ]]
-    update.message.reply_text("🕐 *Set Auto Report Time:*", parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
+    await update.message.reply_text("🕐 *Set Auto Report Time:*", parse_mode=ParseMode.MARKDOWN, reply_markup=InlineKeyboardMarkup(keyboard))
 
-def send_auto_report(context: CallbackContext):
-    chat_id = context.job.context
+async def send_auto_report(context: ContextTypes.DEFAULT_TYPE):
+    chat_id = context.job.chat_id
     now_str = now_kh().strftime("%d/%m/%Y")
     text = build_summary(chat_id, "today", f"🌙 Daily Report {now_str}", "សរុបប្រចាំថ្ងៃ")
-    context.bot.send_message(chat_id=chat_id, text=text + "\n\n✅ រាត្រីល្អ! 🙏", parse_mode="Markdown")
+    await context.bot.send_message(chat_id=chat_id, text=text + "\n\n✅ រាត្រីល្អ! 🙏", parse_mode=ParseMode.MARKDOWN)
 
-def schedule_report(job_queue: JobQueue, chat_id, hour, minute):
+def schedule_report(app, chat_id, hour, minute):
     tz = ZoneInfo(TIMEZONE)
     job_name = f"report_{chat_id}"
-    current_jobs = job_queue.get_jobs_by_name(job_name)
-    for job in current_jobs:
+    for job in app.job_queue.get_jobs_by_name(job_name):
         job.schedule_removal()
-    job_queue.run_daily(
+    app.job_queue.run_daily(
         send_auto_report,
         time=time(hour=hour, minute=minute, tzinfo=tz),
-        context=chat_id,
+        chat_id=chat_id,
         name=job_name
     )
 
-def setreport_button(update: Update, context: CallbackContext):
+async def setreport_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    query.answer()
-    chat_id = query.message.chat.id
-    chat_id_str = str(chat_id)
+    await query.answer()
+    chat_id_int = query.message.chat.id
+    chat_id_str = str(chat_id_int)
     if query.data == "rpt_off":
-        for job in context.job_queue.get_jobs_by_name(f"report_{chat_id}"):
+        for job in context.application.job_queue.get_jobs_by_name(f"report_{chat_id_int}"):
             job.schedule_removal()
         data = load_data()
         chat = get_chat(data, chat_id_str)
         chat.pop("report_hour", None)
         chat.pop("report_minute", None)
         save_data(data)
-        query.edit_message_text("🚫 *Auto report turned OFF*", parse_mode="Markdown")
+        await query.edit_message_text("🚫 *Auto report turned OFF*", parse_mode=ParseMode.MARKDOWN)
         return
     parts = query.data.split("_")
     hour, minute = int(parts[1]), int(parts[2])
@@ -345,47 +335,50 @@ def setreport_button(update: Update, context: CallbackContext):
     chat["report_hour"] = hour
     chat["report_minute"] = minute
     save_data(data)
-    schedule_report(context.job_queue, chat_id, hour, minute)
-    query.edit_message_text(f"✅ *Auto report set at {hour:02d}:{minute:02d}*", parse_mode="Markdown")
+    schedule_report(context.application, chat_id_int, hour, minute)
+    await query.edit_message_text(f"✅ *Auto report set at {hour:02d}:{minute:02d}*", parse_mode=ParseMode.MARKDOWN)
 
-def restore_schedules(job_queue):
+def restore_schedules(app):
     data = load_data()
     for cid, val in data.items():
         h, m = val.get("report_hour"), val.get("report_minute")
         if h is not None and m is not None:
             try:
-                schedule_report(job_queue, int(cid), h, m)
+                schedule_report(app, int(cid), h, m)
             except:
                 pass
 
 # ══════════════════════════════════════════════════════════════════════════════
-# MAIN
+# MAIN — UserBot in thread, Calculationsbot in main async loop
 # ══════════════════════════════════════════════════════════════════════════════
-if __name__ == "__main__":
+async def main():
     # Start UserBot in background thread
     t = threading.Thread(target=run_userbot_thread, daemon=True)
     t.start()
 
-    # Start Calculationsbot in main thread (blocking)
-    updater = Updater(token=BOT_TOKEN, use_context=True)
-    dp = updater.dispatcher
+    # Build Calculationsbot
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start",     start))
+    app.add_handler(CommandHandler("help",      start))
+    app.add_handler(CommandHandler("today",     today_cmd))
+    app.add_handler(CommandHandler("week",      week_cmd))
+    app.add_handler(CommandHandler("month",     month_cmd))
+    app.add_handler(CommandHandler("total",     total_cmd))
+    app.add_handler(CommandHandler("reset",     reset_cmd))
+    app.add_handler(CommandHandler("history",   history_cmd))
+    app.add_handler(CommandHandler("summary",   summary_cmd))
+    app.add_handler(CommandHandler("setreport", setreport_cmd))
+    app.add_handler(CallbackQueryHandler(setreport_button, pattern="^rpt_"))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_manual))
+    restore_schedules(app)
 
-    dp.add_handler(CommandHandler("start",     start))
-    dp.add_handler(CommandHandler("help",      start))
-    dp.add_handler(CommandHandler("today",     today_cmd))
-    dp.add_handler(CommandHandler("week",      week_cmd))
-    dp.add_handler(CommandHandler("month",     month_cmd))
-    dp.add_handler(CommandHandler("total",     total_cmd))
-    dp.add_handler(CommandHandler("reset",     reset_cmd))
-    dp.add_handler(CommandHandler("history",   history_cmd))
-    dp.add_handler(CommandHandler("summary",   summary_cmd))
-    dp.add_handler(CommandHandler("setreport", setreport_cmd))
-    dp.add_handler(CallbackQueryHandler(setreport_button, pattern="^rpt_"))
-    dp.add_handler(CallbackQueryHandler(button_handler))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_manual))
+    async with app:
+        await app.start()
+        await app.updater.start_polling(allowed_updates=["message", "callback_query"])
+        logger.info("🤖 Calculationsbot started!")
+        await asyncio.Event().wait()   # run forever
+        await app.updater.stop()
 
-    restore_schedules(updater.job_queue)
-
-    logger.info("🤖 Calculationsbot started!")
-    updater.start_polling()
-    updater.idle()
+if __name__ == "__main__":
+    asyncio.run(main())
