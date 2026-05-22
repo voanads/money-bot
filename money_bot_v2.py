@@ -360,23 +360,35 @@ async def run_calculationsbot():
     return app
 
 async def main():
-    # Start userbot
-    if SESSION_STRING:
-        await userbot.start()
-    else:
-        await userbot.start(phone=PHONE)
-    logger.info("👁 UserBot started — watching PayWay messages silently")
+    try:
+        # Start userbot with StringSession (no phone needed)
+        if SESSION_STRING:
+            await userbot.start()
+        else:
+            await userbot.start(phone=PHONE)
+        logger.info("👁 UserBot started — watching PayWay messages silently")
+    except Exception as e:
+        logger.error(f"UserBot failed to start: {e}")
+        raise
 
-    # Start calculationsbot
-    app = await run_calculationsbot()
+    try:
+        # Start calculationsbot
+        app = await run_calculationsbot()
+        logger.info("🤖 Both bots running!")
+    except Exception as e:
+        logger.error(f"Calculationsbot failed to start: {e}")
+        raise
 
     # Run both forever
     try:
         await userbot.run_until_disconnected()
     finally:
-        await app.updater.stop()
-        await app.stop()
-        await app.shutdown()
+        try:
+            await app.updater.stop()
+            await app.stop()
+            await app.shutdown()
+        except Exception as e:
+            logger.warning(f"Shutdown error: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
