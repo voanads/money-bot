@@ -22,10 +22,11 @@ from telegram.ext import (
 )
 
 # ── SETTINGS ──────────────────────────────────────────────────────────────────
-API_ID    = 36474508
-API_HASH  = "86a53c87962052aca9e4a28f7aa327d8"
-PHONE     = "+85511205275"   # ← ដាក់លេខ phone ជាក់ស្តែង ឧ. +85512345678
-BOT_TOKEN = "8822723106:AAFA2Kkyt8Vikhlegs_d2Li0srrsKrdz7fw"
+import os
+API_ID    = int(os.environ.get("API_ID", "36474508"))
+API_HASH  = os.environ.get("API_HASH", "86a53c87962052aca9e4a28f7aa327d8")
+PHONE     = os.environ.get("PHONE", "")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 # ─────────────────────────────────────────────────────────────────────────────
 
 TIMEZONE  = "Asia/Phnom_Penh"
