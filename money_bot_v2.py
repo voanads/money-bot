@@ -144,7 +144,19 @@ def build_summary(chat_id, period, label_en, label_km):
 # ══════════════════════════════════════════════════════════════════════════════
 # PART 1: Telethon UserBot — silently saves PayWay messages
 # ══════════════════════════════════════════════════════════════════════════════
-userbot = TelegramClient("userbot_session", API_ID, API_HASH)
+# Use session string from env if available, otherwise use file
+SESSION_STRING = os.environ.get("SESSION_STRING", "")
+if SESSION_STRING:
+    from telethon.sessions import StringSession
+    import base64
+    session_data = base64.b64decode(SESSION_STRING.encode())
+    import tempfile, os as _os
+    tmp = tempfile.NamedTemporaryFile(suffix='.session', delete=False)
+    tmp.write(session_data)
+    tmp.close()
+    userbot = TelegramClient(tmp.name, API_ID, API_HASH)
+else:
+    userbot = TelegramClient("userbot_session", API_ID, API_HASH)
 
 @userbot.on(events.NewMessage())
 async def userbot_handler(event):
@@ -355,7 +367,10 @@ async def run_calculationsbot():
 
 async def main():
     # Start userbot
-    await userbot.start(phone=PHONE)
+    if SESSION_STRING:
+        await userbot.start()
+    else:
+        await userbot.start(phone=PHONE)
     logger.info("👁 UserBot started — watching PayWay messages silently")
 
     # Start calculationsbot
